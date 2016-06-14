@@ -14,7 +14,6 @@ You can also POST to this endpoint with an array of licenses in the body of the 
 wp_remote_post( 
     'https://example.com/edd-api/versions/', 
     array( 
-        'sslverify' => false, 
         'body' => array(
             'licenses' => array('license1', 'license2', 'license3')
         )
