@@ -15,7 +15,8 @@ wp_remote_post(
     'https://example.com/edd-api/versions/', 
     array( 
         'body' => array(
-            'licenses' => array('license1', 'license2', 'license3')
+            'licenses' => array('license1', 'license2', 'license3'),
+            'url' => 'http://yoursite.com'
         )
     ) 
 );
