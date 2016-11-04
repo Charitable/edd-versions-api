@@ -44,12 +44,17 @@ add_filter( 'edd_api_public_query_modes', 'eddvapi_add_versions_query_mode' );
  * @return  array
  * @since   0.1.0
  */
-function eddvapi_get_versions_data( $data, $endpoint ) {
+function eddvapi_get_versions_data( $data, $endpoint, $api ) {
     global $wpdb;
 
     if ( 'versions' != $endpoint ) {
         return $data;
     }        
+
+    /**
+     * Don't log these requests.
+     */
+    $api->log_requests = false;
 
     $sql = "SELECT p.post_title AS name, m.meta_value AS new_version
             FROM $wpdb->postmeta m
@@ -67,7 +72,7 @@ function eddvapi_get_versions_data( $data, $endpoint ) {
         $data[ $version[ 'name' ] ] = $version;
     }
 
-    if ( ! isset( $_POST[ 'licenses' ] ) ) {
+    if ( ! isset( $_POST['licenses'] ) || ! isset( $_POST['url'] ) ) {
         return $versions;
     }
 
@@ -81,7 +86,7 @@ function eddvapi_get_versions_data( $data, $endpoint ) {
 
 }
 
-add_filter( 'edd_api_output_data', 'eddvapi_get_versions_data', 10, 2 );
+add_filter( 'edd_api_output_data', 'eddvapi_get_versions_data', 10, 3 );
 
 /**
  * Return the license response data for a particular download & license key.
@@ -102,15 +107,13 @@ function eddvapi_get_licensed_download_response( $download_id, $license, $data )
         return;
     }
 
-    $url = 'https://wpcharitable.local';
-
-    $name = $download->post_title;
-    $slug = ! empty( $slug ) ? $slug : $download->post_name;
+    $url         = $_POST['url'];
+    $name        = $download->post_title;
+    $slug        = ! empty( $slug ) ? $slug : $download->post_name;
     $description = ! empty( $download->post_excerpt ) ? $download->post_excerpt : $download->post_content;
-    $changelog = get_post_meta( $download_id, '_edd_sl_changelog', true );
-    $package = $sl->get_encoded_download_package_url( $download_id, $license, $url );
-
-    $response = array_merge( $data[ $name ], array(        
+    $changelog   = get_post_meta( $download_id, '_edd_sl_changelog', true );
+    $package     = $sl->get_encoded_download_package_url( $download_id, $license, $url );
+    $response    = array_merge( $data[ $name ], array(        
         'slug'          => $slug,
         'url'           => esc_url( add_query_arg( 'changelog', '1', get_permalink( $download_id ) ) ),
         'last_updated'  => $download->post_modified,
