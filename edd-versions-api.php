@@ -132,10 +132,11 @@ function eddvapi_get_versions_data_new( $data, $endpoint, $api ) {
 				return;
 			}
 
-			$slug        = ! empty( $slug ) ? $slug : $download->post_name;
-			$description = ! empty( $download->post_excerpt ) ? $download->post_excerpt : $download->post_content;
-			$changelog   = get_post_meta( $version->download_id, '_edd_sl_changelog', true );
-			$response    = array(
+			$slug         = ! empty( $slug ) ? $slug : $download->post_name;
+			$description  = ! empty( $download->post_excerpt ) ? $download->post_excerpt : $download->post_content;
+			$changelog    = get_post_meta( $version->download_id, '_edd_sl_changelog', true );
+			$requirements = array_filter( (array) get_post_meta( $version->download_id, '_edd_minimum_requirements', true ) );
+			$response     = array(
 				'download_id'   => $version->download_id,
 				'name'          => $version->name,
 				'new_version'   => $version->new_version,
@@ -145,6 +146,7 @@ function eddvapi_get_versions_data_new( $data, $endpoint, $api ) {
 				'homepage'      => get_permalink( $version->download_id ),
 				'package'       => 'missing_license', // Default package/download link if no license key is provided.
 				'download_link' => 'missing_license', // Default package/download link if no license key is provided.
+				'requirements'  => $requirements,
 				'sections'      => serialize(
 					array(
 						'description' => wpautop( strip_tags( $description, '<p><li><ul><ol><strong><a><em><span><br>' ) ),
@@ -312,3 +314,81 @@ function eddvapi_clear_download_versions_cache() {
 }
 
 add_action( 'save_post_download', 'eddvapi_clear_download_versions_cache' );
+
+/**
+ * Add metabox for minimum requirements.
+ *
+ * @since  0.3.0
+ *
+ * @return void
+ */
+add_action(
+	'add_meta_boxes',
+	function() {
+		add_meta_box(
+			'charitable-minimum-requirements',
+			'Minimum Requirements',
+			function() {
+				global $post;
+
+				$requirements = get_post_meta( $post->id, '_edd_minimum_requirements', true );
+				?>
+				<input type="hidden" name="charitable_min_requirements_meta_box_nonce" value="<?php echo wp_create_nonce( basename( __FILE__ ) ); ?>" />
+				<table class="form-table">
+					<tr class="edd_sl_toggled_row">
+						<td class="edd_field_type_text" colspan="2">
+							<label for="edd_sl_upgrade_file"><strong>PHP Version</strong></label><br/>
+							<input type="text" class="medium-text" style="width:80px;" name="_edd_minimum_requirements[php]" id="edd_minimum_requirements[php]" value="<?php echo esc_attr( $requirements['php'] ); ?>"/>&nbsp;
+						</td>
+					</tr>
+					<tr class="edd_sl_toggled_row">
+						<td class="edd_field_type_text" colspan="2">
+							<label for="edd_sl_upgrade_file"><strong>Charitable Version</strong></label><br/>
+							<input type="text" class="medium-text" style="width:80px;" name="_edd_minimum_requirements[charitable]" id="edd_minimum_requirements[charitable]" value="<?php echo esc_attr( $requirements['charitable'] ); ?>"/>&nbsp;
+						</td>
+					</tr>
+				</table>
+				<?php
+			},
+			'download',
+			'normal',
+			'core'
+		);
+	}
+);
+
+/**
+ * Save the minimum requirements.
+ *
+ * @since  0.3.0
+ *
+ * @param  int $post_id The download id.
+ * @return void
+ */
+add_action(
+	'save_post',
+	function( $post_id ) {
+
+		global $post;
+
+		// verify nonce
+		if ( ! isset( $_POST['charitable_min_requirements_meta_box_nonce'] ) || ! wp_verify_nonce( $_POST['charitable_min_requirements_meta_box_nonce'], basename( __FILE__ ) ) ) {
+			return $post_id;
+		}
+
+		// Check for auto save / bulk edit
+		if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || ( defined( 'DOING_AJAX' ) && DOING_AJAX ) || isset( $_REQUEST['bulk_edit'] ) ) {
+			return $post_id;
+		}
+
+		if ( isset( $_POST['post_type'] ) && 'download' != $_POST['post_type'] ) {
+			return $post_id;
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return $post_id;
+		}
+
+		update_post_meta( $post_id, '_edd_minimum_requirements', $_POST['_edd_minimum_requirements'] );
+	}
+);
