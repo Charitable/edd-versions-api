@@ -3,11 +3,11 @@
  * Plugin Name:         Easy Digital Downloads - Version API
  * Plugin URI:          http://164a.com
  * Description:         Adds a /versions/ endpoint to the EDD REST API. Useful if you're using Software Licensing to handle automatic plugin/theme upgrades.
- * Version:             0.2.0
+ * Version:             0.3.0
  * Author:              Studio 164a
  * Author URI:          https://164a.com
  * Requires at least:   4.5
- * Tested up to:        4.8.1
+ * Tested up to:        5.1.1
  *
  * Text Domain:         eddvapi
  * Domain Path:         /languages/
@@ -331,7 +331,7 @@ add_action(
 			function() {
 				global $post;
 
-				$requirements = get_post_meta( $post->id, '_edd_minimum_requirements', true );
+				$requirements = get_post_meta( $post->ID, '_edd_minimum_requirements', true );
 				?>
 				<input type="hidden" name="charitable_min_requirements_meta_box_nonce" value="<?php echo wp_create_nonce( basename( __FILE__ ) ); ?>" />
 				<table class="form-table">
